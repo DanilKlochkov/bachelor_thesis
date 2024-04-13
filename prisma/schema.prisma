@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Topic {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+  task Task[]
+}
+
+model TaskDifficult {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+  task Task[]
+}
+
+model Task {
+  id                          String                        @id @default(uuid())
+  name                        String
+  description                 String?                       @db.Text
+  taskDifficultId             Int
+  taskDifficult               TaskDifficult                 @relation(fields: [taskDifficultId], references: [id])
+  topicId                     Int
+  topic                       Topic                         @relation(fields: [topicId], references: [id])
+  constraints                 Json                          @db.JsonB
+  allowedResultId             Int?
+  allowedResults              AllowedResult?                @relation(fields: [allowedResultId], references: [id])
+  created                     DateTime                      @default(now()) @db.Timestamptz()
+  creatorId                   Int
+  creator                     User                          @relation(fields: [creatorId], references: [id], name: "creator", onDelete: Cascade)
+  modified                    DateTime                      @updatedAt @db.Timestamptz()
+  modifierId                  Int
+  modifier                    User                          @relation(fields: [modifierId], references: [id], name: "modifier", onDelete: Cascade)
+  allowedProgrammingLanguages AllowedProgrammingLanguages[]
+  taskTags                    TaskTags[]
+  tests                       Test[]
+  solutions                   Solution[]
+  archive                     Boolean                       @default(false)
+
+  @@index([creatorId])
+}
+
+model ProgrammingLanguage {
+  id                          Int                           @id @default(autoincrement())
+  name                        String                        @unique
+  allowedProgrammingLanguages AllowedProgrammingLanguages[]
+  Solution                    Solution[]
+}
+
+model AllowedProgrammingLanguages {
+  id                    Int                 @id @default(autoincrement())
+  programmingLanguageId Int
+  programmingLanguage   ProgrammingLanguage @relation(fields: [programmingLanguageId], references: [id])
+  taskId                String
+  task                  Task                @relation(fields: [taskId], references: [id])
+}
+
+model Tag {
+  id       Int        @id @default(autoincrement())
+  name     String     @unique
+  taskTags TaskTags[]
+}
+
+model TaskTags {
+  id     Int    @id @default(autoincrement())
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id])
+  tagId  Int
+  tag    Tag    @relation(fields: [tagId], references: [id])
+}
+
+model UserTestCompling {
+  id         Int      @id @default(autoincrement())
+  task       Test     @relation(fields: [testId], references: [id])
+  testId     Int
+  solution   Solution @relation(fields: [solutionId], references: [id])
+  solutionId String
+  isError    Boolean
+  User       User?    @relation(fields: [userId], references: [id])
+  userId     Int?
+}
+
+model Test {
+  id               Int                @id @default(autoincrement())
+  input            TestInput[]
+  outputId         Int
+  output           TestOutput         @relation(fields: [outputId], references: [id])
+  operation        TestOperation
+  explanation      String             @db.Text
+  taskId           String
+  task             Task               @relation(fields: [taskId], references: [id])
+  UserTestCompling UserTestCompling[]
+}
+
+model TestInput {
+  id       Int    @id @default(autoincrement())
+  type     String
+  value    String
+  position Int
+  Test     Test?  @relation(fields: [testId], references: [id])
+  testId   Int?
+}
+
+model TestOutput {
+  id       Int    @id @default(autoincrement())
+  type     String
+  value    String
+  position Int
+  Test     Test[]
+}
+
+enum TestOperation {
+  equals
+  less
+  more
+}
+
+model User {
+  id               Int                @id @default(autoincrement())
+  fio              String
+  group            Int
+  solutions        Solution[]
+  createdTasks     Task[]             @relation("creator")
+  modifiedTasks    Task[]             @relation("modifier")
+  UserTestCompling UserTestCompling[]
+}
+
+model Solution {
+  id                    String              @id @default(uuid())
+  taskId                String
+  task                  Task                @relation(fields: [taskId], references: [id])
+  programmingLanguageId Int
+  programmingLanguage   ProgrammingLanguage @relation(fields: [programmingLanguageId], references: [id])
+  solved                DateTime            @db.Timestamptz()
+  userId                Int
+  user                  User                @relation(fields: [userId], references: [id])
+  code                  String              @db.Text
+  rating                Float?
+  UserTestCompling      UserTestCompling[]
+
+  @@index([userId, taskId])
+}
+
+model AllowedResult {
+  id    Int    @id @default(autoincrement())
+  name  String
+  tasks Task[]
+}
